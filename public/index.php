@@ -16,8 +16,49 @@ $platformsByType = [
 	'android' => ['Android 12', 'Android 13', 'Android 14'],
 ];
 
-$allowedApps = ['Facebook','Messenger','Zalo','TikTok','YouTube','Chrome','Gmail','WhatsApp','Telegram','Viber'];
+// App catalog by category (Vietnamese)
+$appCatalog = [
+	'Hệ thống' => ['Điện thoại','Tin nhắn','Danh bạ','Cài đặt','Trình duyệt','Camera'],
+	'Giải trí' => ['Thư viện ảnh/video','Nhạc','Video Player','Genesis Plus GX'],
+	'Tiện ích' => ['Ghi chú','Máy tính','Đồng hồ','Lịch','Thời tiết','File Manager'],
+	'Kết nối' => ['Email','Chat App','Maps'],
+	'Mở rộng' => ['App Store','Cloud Drive','AI Assistant','Ví điện tử','Cloud Phone Web'],
+];
+
+// Flatten all apps
+$allApps = [];
+foreach ($appCatalog as $categoryName => $apps) {
+	foreach ($apps as $appName) {
+		$allApps[] = $appName;
+	}
+}
+
+// Abbreviations for app icons
 $appAbbr = [
+	'Điện thoại' => 'TEL',
+	'Tin nhắn' => 'SMS',
+	'Danh bạ' => 'CN',
+	'Cài đặt' => 'SET',
+	'Trình duyệt' => 'WEB',
+	'Camera' => 'CAM',
+	'Thư viện ảnh/video' => 'GL',
+	'Nhạc' => 'MU',
+	'Video Player' => 'VP',
+	'Ghi chú' => 'NT',
+	'Máy tính' => 'CAL',
+	'Đồng hồ' => 'CLK',
+	'Lịch' => 'CALR',
+	'Thời tiết' => 'WX',
+	'File Manager' => 'FM',
+	'Email' => 'EM',
+	'Chat App' => 'CHAT',
+	'Maps' => 'MAP',
+	'App Store' => 'APP',
+	'Cloud Drive' => 'CD',
+	'AI Assistant' => 'AI',
+	'Ví điện tử' => 'WLT',
+	'Genesis Plus GX' => 'GX',
+	'Cloud Phone Web' => 'CPW',
 	'Facebook' => 'FB',
 	'Messenger' => 'MS',
 	'Zalo' => 'ZA',
@@ -44,6 +85,7 @@ $selectedApps = [];
 $selectedFeatures = [];
 $displayMode = 'mock';
 $iframeUrlTemplate = '';
+$iframePreset = 'none';
 $errors = [];
 $warnings = [];
 
@@ -56,6 +98,7 @@ if ($method === 'POST') {
 	$featuresRaw = $_POST['features'] ?? [];
 	$displayModeRaw = $_POST['display_mode'] ?? 'mock';
 	$iframeUrlTemplateRaw = trim((string)($_POST['iframe_url_template'] ?? ''));
+	$iframePresetRaw = $_POST['iframe_preset'] ?? 'none';
 
 	// Type
 	if ($deviceTypeRaw !== '' && in_array($deviceTypeRaw, $allowedTypes, true)) {
@@ -104,7 +147,7 @@ if ($method === 'POST') {
 	// Apps (software)
 	if (is_array($appsRaw)) {
 		foreach ($appsRaw as $app) {
-			if (in_array($app, $allowedApps, true)) {
+			if (in_array($app, $allApps, true)) {
 				$selectedApps[] = $app;
 			}
 		}
@@ -123,6 +166,9 @@ if ($method === 'POST') {
 		}
 		$selectedFeatures = array_values(array_unique($selectedFeatures));
 	}
+
+	// Iframe preset
+	$iframePreset = in_array($iframePresetRaw, ['none','genesis_plus_gx','cloud_phone_web'], true) ? $iframePresetRaw : 'none';
 
 	// Iframe URL validation when displayMode is iframe
 	if ($displayMode === 'iframe') {
@@ -206,8 +252,18 @@ function build_iframe_src(string $template, int $index): string {
 				</div>
 
 				<div class="form-row iframe-only <?= $displayMode === 'iframe' ? '' : 'hidden' ?>">
+					<label for="iframe_preset">Nhà cung cấp (preset)</label>
+					<select id="iframe_preset" name="iframe_preset">
+						<option value="none" <?= $iframePreset === 'none' ? 'selected' : '' ?>>Tự nhập</option>
+						<option value="genesis_plus_gx" <?= $iframePreset === 'genesis_plus_gx' ? 'selected' : '' ?>>Genesis Plus GX (ví dụ)</option>
+						<option value="cloud_phone_web" <?= $iframePreset === 'cloud_phone_web' ? 'selected' : '' ?>>Cloud Phone Web (ví dụ)</option>
+					</select>
+				</div>
+
+				<div class="form-row iframe-only <?= $displayMode === 'iframe' ? '' : 'hidden' ?>">
 					<label for="iframe_url_template">Iframe URL template (dùng {i} cho chỉ số máy)</label>
 					<input type="text" id="iframe_url_template" name="iframe_url_template" placeholder="https://provider.example/sessions/{i}?token=..." value="<?= h($iframeUrlTemplate) ?>">
+					<small class="help">Ví dụ GX: https://gx.example/room/{i} • Cloud Phone Web: https://cloudphone.example/device/{i}?token=...</small>
 				</div>
 
 				<div class="form-row">
@@ -230,11 +286,26 @@ function build_iframe_src(string $template, int $index): string {
 
 				<div class="form-row">
 					<label for="apps">Phần mềm (giữ Ctrl/Cmd để chọn nhiều)</label>
-					<select id="apps" name="apps[]" multiple size="6">
-						<?php foreach ($allowedApps as $app): ?>
-							<option value="<?= h($app) ?>" <?= in_array($app, $selectedApps, true) ? 'selected' : '' ?>><?= h($app) ?></option>
+					<select id="apps" name="apps[]" multiple size="10">
+						<?php foreach ($appCatalog as $cat => $apps): ?>
+							<optgroup label="<?= h($cat) ?>">
+								<?php foreach ($apps as $app): ?>
+									<option value="<?= h($app) ?>" data-cat="<?= h($cat) ?>" <?= in_array($app, $selectedApps, true) ? 'selected' : '' ?>><?= h($app) ?></option>
+								<?php endforeach; ?>
+							</optgroup>
 						<?php endforeach; ?>
 					</select>
+					<div class="category-actions">
+						<div class="row">
+							<button type="button" class="btn small" data-action="select-all">Chọn tất cả</button>
+							<button type="button" class="btn small" data-action="clear-all">Bỏ chọn</button>
+						</div>
+						<div class="row wrap">
+							<?php foreach (array_keys($appCatalog) as $cat): ?>
+								<button type="button" class="btn pill" data-cat="<?= h($cat) ?>"><?= h($cat) ?></button>
+							<?php endforeach; ?>
+						</div>
+					</div>
 				</div>
 
 				<div class="form-row">
@@ -312,7 +383,7 @@ function build_iframe_src(string $template, int $index): string {
 					<?php endfor; ?>
 				</div>
 			<?php else: ?>
-				<p class="muted">Chọn loại, mẫu máy, nền tảng, phần mềm và tính năng. Có thể chọn chế độ Iframe để nhúng Emulator/Cloud OS thật (URL template với {i}). Sau đó bấm "Tạo điện thoại".</p>
+				<p class="muted">Chọn loại, mẫu máy, nền tảng, phần mềm theo danh mục (có Genesis Plus GX, Cloud Phone Web) và tính năng. Có thể chọn chế độ Iframe để nhúng Emulator/Cloud OS thật. Sau đó bấm "Tạo điện thoại".</p>
 			<?php endif; ?>
 		</section>
 	</main>
@@ -328,7 +399,14 @@ function build_iframe_src(string $template, int $index): string {
 		const modelEl = document.getElementById('model');
 		const platformEl = document.getElementById('platform');
 		const displayModeEl = document.getElementById('display_mode');
-		const iframeRow = document.querySelector('.iframe-only');
+		const iframeRow = document.querySelectorAll('.iframe-only');
+		const iframePresetEl = document.getElementById('iframe_preset');
+		const iframeUrlEl = document.getElementById('iframe_url_template');
+		const appsSelect = document.getElementById('apps');
+		const presetTemplates = {
+			'genesis_plus_gx': 'https://gx.example/room/{i}',
+			'cloud_phone_web': 'https://cloudphone.example/device/{i}?token=YOUR_TOKEN',
+		};
 
 		function refill(select, options) {
 			const current = select.value;
@@ -352,11 +430,37 @@ function build_iframe_src(string $template, int $index): string {
 		});
 
 		displayModeEl.addEventListener('change', () => {
-			if (displayModeEl.value === 'iframe') {
-				iframeRow.classList.remove('hidden');
-			} else {
-				iframeRow.classList.add('hidden');
+			const show = displayModeEl.value === 'iframe';
+			iframeRow.forEach(el => { el.classList.toggle('hidden', !show); });
+		});
+
+		iframePresetEl && iframePresetEl.addEventListener('change', () => {
+			const v = iframePresetEl.value;
+			if (presetTemplates[v]) {
+				iframeUrlEl.value = presetTemplates[v];
 			}
+		});
+
+		// Category quick selects
+		document.querySelectorAll('.category-actions .btn.pill').forEach(btn => {
+			btn.addEventListener('click', () => {
+				const cat = btn.getAttribute('data-cat');
+				[...appsSelect.options].forEach(o => {
+					if (o.getAttribute('data-cat') === cat) {
+						o.selected = true;
+					}
+				});
+				appsSelect.dispatchEvent(new Event('change', {bubbles:true}));
+			});
+		});
+
+		document.querySelector('.category-actions [data-action="select-all"]').addEventListener('click', () => {
+			[...appsSelect.options].forEach(o => o.selected = true);
+			appsSelect.dispatchEvent(new Event('change', {bubbles:true}));
+		});
+		document.querySelector('.category-actions [data-action="clear-all"]').addEventListener('click', () => {
+			[...appsSelect.options].forEach(o => o.selected = false);
+			appsSelect.dispatchEvent(new Event('change', {bubbles:true}));
 		});
 	</script>
 </body>

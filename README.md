@@ -1,6 +1,6 @@
 # Cloud Phone (PHP)
 
-Ứng dụng PHP đơn giản cho phép chọn loại thiết bị (iPhone/Android), số lượng 1–20, mẫu máy, nền tảng (OS), phần mềm và tính năng; hỗ trợ chế độ mô phỏng UI hoặc nhúng iframe (emulator/cloud OS thật).
+Ứng dụng PHP cho phép chọn loại thiết bị (iPhone/Android), số lượng 1–20, mẫu máy, nền tảng (OS), phần mềm theo danh mục, tính năng; hỗ trợ mô phỏng UI hoặc nhúng iframe (emulator/cloud OS thật).
 
 ## Chạy local
 
@@ -10,26 +10,35 @@ Yêu cầu PHP 8+.
 php -S 0.0.0.0:8000 -t public
 ```
 
-Mở trình duyệt: http://localhost:8000
+Mở: http://localhost:8000
+
+## Danh mục phần mềm (App Catalog)
+
+- Hệ thống: Điện thoại, Tin nhắn, Danh bạ, Cài đặt, Trình duyệt, Camera
+- Giải trí: Thư viện ảnh/video, Nhạc, Video Player, Genesis Plus GX
+- Tiện ích: Ghi chú, Máy tính, Đồng hồ, Lịch, Thời tiết, File Manager
+- Kết nối: Email, Chat App, Maps
+- Mở rộng: App Store, Cloud Drive, AI Assistant, Ví điện tử, Cloud Phone Web
+
+Form cho phép multi-select và có nút chọn nhanh theo danh mục.
 
 ## Chế độ hiển thị
 
-- Mô phỏng (mock): hiển thị lưới icon giả lập.
-- Iframe (Emulator/Cloud OS thật): nhúng URL từ nhà cung cấp emulator/cloud phone.
-  - Nhập "Iframe URL template". Có thể dùng `{i}` để thay thế chỉ số thiết bị (1..N).
-  - Ví dụ: `https://provider.example/sessions/{i}?token=YOUR_TOKEN`
-  - Trình duyệt và nhà cung cấp phải cho phép nhúng iframe (X-Frame-Options/Content-Security-Policy phù hợp).
-  - Một số tính năng (camera/mic/clipboard/fullscreen) cần quyền allow trong iframe; đã bật sẵn qua `allow` và `sandbox`.
+- Mô phỏng (mock): lưới icon với nhãn viết tắt.
+- Iframe (Emulator/Cloud OS thật): điền "Iframe URL template" (hỗ trợ `{i}` = chỉ số máy).
+  - Presets (ví dụ): Genesis Plus GX, Cloud Phone Web. Chọn preset sẽ tự điền URL mẫu:
+    - GX: `https://gx.example/room/{i}`
+    - Cloud Phone Web: `https://cloudphone.example/device/{i}?token=YOUR_TOKEN`
+  - Lưu ý: Nhà cung cấp phải cho phép nhúng (CSP/X-Frame-Options). Một số quyền (camera/mic/clipboard/fullscreen) đã cấp trong thuộc tính `allow` của iframe.
 
 ## Cấu trúc
 
-- `public/index.php` – Trang chính với form, validation và render thiết bị/iframe
-- `public/styles.css` – Giao diện, phù hiệu (badge), và style iframe trong màn hình thiết bị
+- `public/index.php` – Form, validation, danh mục app, preset iframe, render
+- `public/styles.css` – Giao diện, badge, danh mục và style iframe
 
 ## Ghi chú
 
-- Validate số lượng trong khoảng 1–20
-- Loại hợp lệ: `iphone`, `android`
-- Mẫu máy và OS tự động lọc theo loại
-- App hiển thị tối đa 12 (mặc định 9 ô ở màn đầu)
-- Iframe yêu cầu URL bắt đầu bằng http/https; nếu thiếu `{i}` thì mọi thiết bị dùng cùng URL
+- Validate số lượng 1–20
+- Mẫu máy và OS lọc theo loại
+- Tối đa 12 app hiển thị
+- Nếu URL iframe không có `{i}`, mọi thiết bị dùng cùng URL

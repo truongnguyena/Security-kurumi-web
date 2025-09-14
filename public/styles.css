@@ -130,7 +130,37 @@ select, input[type="number"], input[type="text"] {
 }
 
 select[multiple] {
-	height: 140px;
+	height: 180px;
+}
+
+.category-actions {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.category-actions .row {
+	display: flex;
+	gap: 8px;
+}
+
+.category-actions .row.wrap { flex-wrap: wrap; }
+
+.btn.small {
+	padding: 6px 10px;
+	font-size: 12px;
+	background: rgba(255,255,255,0.06);
+	color: var(--text);
+}
+
+.btn.pill {
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	background: rgba(79,140,255,0.12);
+	color: #caddff;
+	border: 1px solid rgba(79,140,255,0.35);
 }
 
 select:focus, input[type="number"]:focus, input[type="text"]:focus {
