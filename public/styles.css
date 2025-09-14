@@ -10,6 +10,8 @@
 	--screen: #0a0f23;
 	--iphone: #1e2748;
 	--android: #1f3a2e;
+	--badge: rgba(255,255,255,0.08);
+	--badge-border: rgba(255,255,255,0.16);
 }
 
 * {
@@ -96,6 +98,20 @@ body {
 	gap: 6px;
 }
 
+.feature-list {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(120px, 1fr));
+	gap: 6px 12px;
+}
+
+.cb {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: var(--text);
+}
+
 label {
 	font-size: 13px;
 	color: var(--muted);
@@ -109,6 +125,10 @@ select, input[type="number"] {
 	background: rgba(255,255,255,0.04);
 	color: var(--text);
 	outline: none;
+}
+
+select[multiple] {
+	height: 140px;
 }
 
 select:focus, input[type="number"]:focus {
@@ -160,6 +180,34 @@ select:focus, input[type="number"]:focus {
 	font-size: 13px;
 	color: var(--muted);
 }
+
+.badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+	margin-bottom: 8px;
+}
+
+.badges.features {
+	margin-top: 8px;
+}
+
+.badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border-radius: 999px;
+	background: var(--badge);
+	border: 1px solid var(--badge-border);
+	font-size: 11px;
+	color: var(--text);
+}
+
+.badge.os { background: rgba(79, 140, 255, 0.12); border-color: rgba(79, 140, 255, 0.35); }
+.badge.model { background: rgba(255, 255, 255, 0.06); }
+.badge.feature { background: rgba(255, 255, 255, 0.05); }
 
 /* Device */
 .device {
@@ -241,6 +289,20 @@ select:focus, input[type="number"]:focus {
 	background: linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06));
 	border: 1px solid rgba(255,255,255,0.08);
 	box-shadow: inset 0 -8px 12px rgba(0,0,0,0.25), 0 4px 10px rgba(0,0,0,0.25);
+	position: relative;
+}
+
+.app::after {
+	content: attr(data-label);
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	color: #fff;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+	text-shadow: 0 1px 1px rgba(0,0,0,0.5);
 }
 
 .site-footer {
