@@ -18,6 +18,8 @@
 	box-sizing: border-box;
 }
 
+.hidden { display: none; }
+
 html, body {
 	height: 100%;
 }
@@ -117,7 +119,7 @@ label {
 	color: var(--muted);
 }
 
-select, input[type="number"] {
+select, input[type="number"], input[type="text"] {
 	width: 100%;
 	padding: 10px 12px;
 	border-radius: 10px;
@@ -131,7 +133,7 @@ select[multiple] {
 	height: 140px;
 }
 
-select:focus, input[type="number"]:focus {
+select:focus, input[type="number"]:focus, input[type="text"]:focus {
 	border-color: rgba(79, 140, 255, 0.8);
 	box-shadow: 0 0 0 3px rgba(79,140,255,0.2);
 }
@@ -252,6 +254,24 @@ select:focus, input[type="number"]:focus {
 	background: radial-gradient(100% 100% at 0% 0%, #0b1635 0%, #09112b 40%, #0a0f23 100%);
 	overflow: hidden;
 	border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Live iframe inside screen */
+.live-iframe {
+	position: absolute;
+	top: 28px;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 0 8px 8px;
+}
+
+.live-iframe iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+	border-radius: 14px;
+	background: #000;
 }
 
 .status-bar {

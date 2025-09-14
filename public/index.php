@@ -32,6 +32,8 @@ $appAbbr = [
 
 $allowedFeatures = ['Camera','GPS','NFC','5G','Dual SIM','Bluetooth','Wi‑Fi','Hotspot'];
 
+$displayModes = ['mock', 'iframe'];
+
 // Read form input
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $quantity = 1;
@@ -40,7 +42,10 @@ $selectedModel = '';
 $selectedPlatform = '';
 $selectedApps = [];
 $selectedFeatures = [];
+$displayMode = 'mock';
+$iframeUrlTemplate = '';
 $errors = [];
+$warnings = [];
 
 if ($method === 'POST') {
 	$quantityRaw = $_POST['quantity'] ?? '';
@@ -49,6 +54,8 @@ if ($method === 'POST') {
 	$platformRaw = $_POST['platform'] ?? '';
 	$appsRaw = $_POST['apps'] ?? [];
 	$featuresRaw = $_POST['features'] ?? [];
+	$displayModeRaw = $_POST['display_mode'] ?? 'mock';
+	$iframeUrlTemplateRaw = trim((string)($_POST['iframe_url_template'] ?? ''));
 
 	// Type
 	if ($deviceTypeRaw !== '' && in_array($deviceTypeRaw, $allowedTypes, true)) {
@@ -65,6 +72,13 @@ if ($method === 'POST') {
 		if ($quantity < $minDevices || $quantity > $maxDevices) {
 			$errors[] = 'Số lượng phải từ ' . $minDevices . ' đến ' . $maxDevices . '.';
 		}
+	}
+
+	// Display mode
+	if (in_array($displayModeRaw, $displayModes, true)) {
+		$displayMode = $displayModeRaw;
+	} else {
+		$errors[] = 'Chế độ hiển thị không hợp lệ.';
 	}
 
 	// Model
@@ -94,7 +108,6 @@ if ($method === 'POST') {
 				$selectedApps[] = $app;
 			}
 		}
-		// Optional: limit number of icons displayed
 		$selectedApps = array_values(array_unique($selectedApps));
 		if (count($selectedApps) > 12) {
 			$selectedApps = array_slice($selectedApps, 0, 12);
@@ -110,12 +123,30 @@ if ($method === 'POST') {
 		}
 		$selectedFeatures = array_values(array_unique($selectedFeatures));
 	}
+
+	// Iframe URL validation when displayMode is iframe
+	if ($displayMode === 'iframe') {
+		$iframeUrlTemplate = $iframeUrlTemplateRaw;
+		if ($iframeUrlTemplate === '') {
+			$errors[] = 'Vui lòng nhập URL template cho iframe.';
+		} else {
+			if (!preg_match('/^https?:\/\//i', $iframeUrlTemplate)) {
+				$errors[] = 'URL iframe phải bắt đầu bằng http:// hoặc https://';
+			}
+			if (strpos($iframeUrlTemplate, '{i}') === false) {
+				$warnings[] = 'URL không chứa {i}; tất cả thiết bị sẽ dùng cùng một URL.';
+			}
+		}
+	}
 }
 
 // Helpers
 function h(string $value): string { return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function app_label(string $name, array $abbr): string {
 	return $abbr[$name] ?? strtoupper(substr($name, 0, 2));
+}
+function build_iframe_src(string $template, int $index): string {
+	return str_replace('{i}', (string)$index, $template);
 }
 
 ?><!doctype html>
@@ -147,6 +178,15 @@ function app_label(string $name, array $abbr): string {
 					</ul>
 				</div>
 			<?php endif; ?>
+			<?php if (!empty($warnings)): ?>
+				<div class="alert" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);">
+					<ul>
+						<?php foreach ($warnings as $w): ?>
+							<li><?= h($w) ?></li>
+						<?php endforeach; ?>
+					</ul>
+				</div>
+			<?php endif; ?>
 
 			<form method="post" class="config-form" novalidate>
 				<div class="form-row">
@@ -155,6 +195,19 @@ function app_label(string $name, array $abbr): string {
 						<option value="iphone" <?= $deviceType === 'iphone' ? 'selected' : '' ?>>iPhone</option>
 						<option value="android" <?= $deviceType === 'android' ? 'selected' : '' ?>>Android</option>
 					</select>
+				</div>
+
+				<div class="form-row">
+					<label for="display_mode">Chế độ hiển thị</label>
+					<select id="display_mode" name="display_mode" required>
+						<option value="mock" <?= $displayMode === 'mock' ? 'selected' : '' ?>>Mô phỏng (giả lập UI)</option>
+						<option value="iframe" <?= $displayMode === 'iframe' ? 'selected' : '' ?>>Iframe (Emulator/Cloud OS thật)</option>
+					</select>
+				</div>
+
+				<div class="form-row iframe-only <?= $displayMode === 'iframe' ? '' : 'hidden' ?>">
+					<label for="iframe_url_template">Iframe URL template (dùng {i} cho chỉ số máy)</label>
+					<input type="text" id="iframe_url_template" name="iframe_url_template" placeholder="https://provider.example/sessions/{i}?token=..." value="<?= h($iframeUrlTemplate) ?>">
 				</div>
 
 				<div class="form-row">
@@ -210,7 +263,7 @@ function app_label(string $name, array $abbr): string {
 		<section class="panel">
 			<h2 class="panel-title">Kết quả</h2>
 			<?php if ($method === 'POST' && empty($errors)): ?>
-				<p class="result-meta">Đang hiển thị <?= (int) $quantity ?> thiết bị: <strong><?= h(ucfirst($deviceType)) ?></strong></p>
+				<p class="result-meta">Đang hiển thị <?= (int) $quantity ?> thiết bị: <strong><?= h(ucfirst($deviceType)) ?></strong> • Chế độ: <strong><?= h($displayMode) ?></strong></p>
 				<div class="phone-grid">
 					<?php for ($i = 1; $i <= $quantity; $i++): ?>
 						<div class="phone-card">
@@ -225,20 +278,26 @@ function app_label(string $name, array $abbr): string {
 										<span class="time"><?= date('H:i') ?></span>
 										<span class="battery"></span>
 									</div>
-									<div class="app-grid">
-										<?php if (!empty($selectedApps)): ?>
-											<?php foreach ($selectedApps as $app): ?>
-												<span class="app" title="<?= h($app) ?>" data-label="<?= h(app_label($app, $appAbbr)) ?>"></span>
-											<?php endforeach; ?>
-											<?php for ($a = count($selectedApps); $a < 9; $a++): ?>
-												<span class="app" data-label=""></span>
-											<?php endfor; ?>
-										<?php else: ?>
-											<?php for ($a = 0; $a < 9; $a++): ?>
-												<span class="app" data-label=""></span>
-											<?php endfor; ?>
-										<?php endif; ?>
-									</div>
+									<?php if ($displayMode === 'iframe' && $iframeUrlTemplate !== ''): ?>
+										<div class="live-iframe">
+											<iframe src="<?= h(build_iframe_src($iframeUrlTemplate, $i)) ?>" loading="lazy" allow="autoplay; clipboard-read; clipboard-write; fullscreen; geolocation; microphone; camera" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+										</div>
+									<?php else: ?>
+										<div class="app-grid">
+											<?php if (!empty($selectedApps)): ?>
+												<?php foreach ($selectedApps as $app): ?>
+													<span class="app" title="<?= h($app) ?>" data-label="<?= h(app_label($app, $appAbbr)) ?>"></span>
+												<?php endforeach; ?>
+												<?php for ($a = count($selectedApps); $a < 9; $a++): ?>
+													<span class="app" data-label=""></span>
+												<?php endfor; ?>
+											<?php else: ?>
+												<?php for ($a = 0; $a < 9; $a++): ?>
+													<span class="app" data-label=""></span>
+												<?php endfor; ?>
+											<?php endif; ?>
+										</div>
+									<?php endif; ?>
 								</div>
 							</div>
 							<div class="label">#<?= $i ?> <?= h(ucfirst($deviceType)) ?></div>
@@ -253,7 +312,7 @@ function app_label(string $name, array $abbr): string {
 					<?php endfor; ?>
 				</div>
 			<?php else: ?>
-				<p class="muted">Chọn loại, mẫu máy, nền tảng, phần mềm và tính năng. Sau đó bấm "Tạo điện thoại" để xem dàn thiết bị.</p>
+				<p class="muted">Chọn loại, mẫu máy, nền tảng, phần mềm và tính năng. Có thể chọn chế độ Iframe để nhúng Emulator/Cloud OS thật (URL template với {i}). Sau đó bấm "Tạo điện thoại".</p>
 			<?php endif; ?>
 		</section>
 	</main>
@@ -268,6 +327,8 @@ function app_label(string $name, array $abbr): string {
 		const deviceTypeEl = document.getElementById('device_type');
 		const modelEl = document.getElementById('model');
 		const platformEl = document.getElementById('platform');
+		const displayModeEl = document.getElementById('display_mode');
+		const iframeRow = document.querySelector('.iframe-only');
 
 		function refill(select, options) {
 			const current = select.value;
@@ -278,7 +339,6 @@ function app_label(string $name, array $abbr): string {
 				opt.textContent = v;
 				select.appendChild(opt);
 			});
-			// Try keep previous value if still valid
 			const values = options.map(String);
 			if (values.includes(current)) {
 				select.value = current;
@@ -289,6 +349,14 @@ function app_label(string $name, array $abbr): string {
 			const type = deviceTypeEl.value;
 			refill(modelEl, modelsByType[type] || []);
 			refill(platformEl, platformsByType[type] || []);
+		});
+
+		displayModeEl.addEventListener('change', () => {
+			if (displayModeEl.value === 'iframe') {
+				iframeRow.classList.remove('hidden');
+			} else {
+				iframeRow.classList.add('hidden');
+			}
 		});
 	</script>
 </body>
