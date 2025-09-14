@@ -86,6 +86,8 @@ $selectedFeatures = [];
 $displayMode = 'mock';
 $iframeUrlTemplate = '';
 $iframePreset = 'none';
+$namePrefix = '';
+$gridColumns = 'auto'; // 'auto' or 1..6
 $errors = [];
 $warnings = [];
 
@@ -99,6 +101,8 @@ if ($method === 'POST') {
 	$displayModeRaw = $_POST['display_mode'] ?? 'mock';
 	$iframeUrlTemplateRaw = trim((string)($_POST['iframe_url_template'] ?? ''));
 	$iframePresetRaw = $_POST['iframe_preset'] ?? 'none';
+	$namePrefixRaw = trim((string)($_POST['name_prefix'] ?? ''));
+	$gridColumnsRaw = $_POST['grid_columns'] ?? 'auto';
 
 	// Type
 	if ($deviceTypeRaw !== '' && in_array($deviceTypeRaw, $allowedTypes, true)) {
@@ -183,6 +187,26 @@ if ($method === 'POST') {
 				$warnings[] = 'URL không chứa {i}; tất cả thiết bị sẽ dùng cùng một URL.';
 			}
 		}
+	}
+
+	// Advanced: name prefix
+	if ($namePrefixRaw !== '') {
+		if (mb_strlen($namePrefixRaw) > 32) {
+			$namePrefix = mb_substr($namePrefixRaw, 0, 32);
+			$warnings[] = 'Tiền tố tên máy đã được cắt bớt đến 32 ký tự.';
+		} else {
+			$namePrefix = $namePrefixRaw;
+		}
+	}
+
+	// Advanced: grid columns
+	if ($gridColumnsRaw === 'auto') {
+		$gridColumns = 'auto';
+	} elseif (is_numeric($gridColumnsRaw)) {
+		$gc = (int)$gridColumnsRaw;
+		$gridColumns = ($gc >= 1 && $gc <= 6) ? (string)$gc : 'auto';
+	} else {
+		$gridColumns = 'auto';
 	}
 }
 
@@ -320,9 +344,31 @@ function build_iframe_src(string $template, int $index): string {
 					</div>
 				</div>
 
+				<!-- Advanced options -->
 				<div class="form-row">
-					<label for="quantity">Số lượng</label>
-					<input type="number" id="quantity" name="quantity" min="<?= $minDevices ?>" max="<?= $maxDevices ?>" step="1" value="<?= (int) $quantity ?>" required>
+					<label for="name_prefix">Tiền tố tên máy (ví dụ: Máy A-)</label>
+					<input type="text" id="name_prefix" name="name_prefix" maxlength="32" value="<?= h($namePrefix) ?>">
+				</div>
+
+				<div class="form-row">
+					<label for="grid_columns">Số cột lưới</label>
+					<select id="grid_columns" name="grid_columns">
+						<option value="auto" <?= $gridColumns === 'auto' ? 'selected' : '' ?>>Tự động</option>
+						<?php for ($c = 1; $c <= 6; $c++): ?>
+							<option value="<?= $c ?>" <?= (string)$gridColumns === (string)$c ? 'selected' : '' ?>><?= $c ?></option>
+						<?php endfor; ?>
+					</select>
+				</div>
+
+				<!-- Config JSON -->
+				<div class="form-row">
+					<label for="config_json">Cấu hình (JSON) – xuất/nhập nhanh</label>
+					<textarea id="config_json" class="json" placeholder="Dán JSON ở đây để tải cấu hình hoặc bấm Sao chép/Tải xuống để xuất"></textarea>
+					<div class="row">
+						<button type="button" class="btn small" id="copy_config">Sao chép cấu hình</button>
+						<button type="button" class="btn small" id="download_config">Tải xuống JSON</button>
+						<button type="button" class="btn small" id="load_config">Tải cấu hình</button>
+					</div>
 				</div>
 
 				<div class="form-actions">
@@ -335,7 +381,12 @@ function build_iframe_src(string $template, int $index): string {
 			<h2 class="panel-title">Kết quả</h2>
 			<?php if ($method === 'POST' && empty($errors)): ?>
 				<p class="result-meta">Đang hiển thị <?= (int) $quantity ?> thiết bị: <strong><?= h(ucfirst($deviceType)) ?></strong> • Chế độ: <strong><?= h($displayMode) ?></strong></p>
-				<div class="phone-grid">
+				<?php if ($displayMode === 'iframe'): ?>
+					<div class="form-actions" style="margin-bottom:12px; justify-content:center;">
+						<button type="button" class="btn small" id="reload_iframes">Tải lại iframes</button>
+					</div>
+				<?php endif; ?>
+				<div class="phone-grid"<?= ($gridColumns !== 'auto') ? ' style="grid-template-columns: repeat(' . (int)$gridColumns . ', minmax(180px, 1fr));"' : '' ?>>
 					<?php for ($i = 1; $i <= $quantity; $i++): ?>
 						<div class="phone-card">
 							<div class="badges">
@@ -371,7 +422,7 @@ function build_iframe_src(string $template, int $index): string {
 									<?php endif; ?>
 								</div>
 							</div>
-							<div class="label">#<?= $i ?> <?= h(ucfirst($deviceType)) ?></div>
+							<div class="label"><?php if ($namePrefix !== ''): ?><?= h($namePrefix) ?><?= $i ?><?php else: ?>#<?= $i ?> <?= h(ucfirst($deviceType)) ?><?php endif; ?></div>
 							<?php if (!empty($selectedFeatures)): ?>
 								<div class="badges features">
 									<?php foreach ($selectedFeatures as $feat): ?>
@@ -383,8 +434,29 @@ function build_iframe_src(string $template, int $index): string {
 					<?php endfor; ?>
 				</div>
 			<?php else: ?>
-				<p class="muted">Chọn loại, mẫu máy, nền tảng, phần mềm theo danh mục (có Genesis Plus GX, Cloud Phone Web) và tính năng. Có thể chọn chế độ Iframe để nhúng Emulator/Cloud OS thật. Sau đó bấm "Tạo điện thoại".</p>
+				<p class="muted">Chọn loại, mẫu máy, nền tảng, phần mềm theo danh mục và tính năng. Có thể chọn chế độ Iframe để nhúng Emulator/Cloud OS thật. Sau đó bấm "Tạo điện thoại".</p>
 			<?php endif; ?>
+		</section>
+
+		<section class="panel">
+			<h2 class="panel-title">Hướng dẫn sử dụng (Tiếng Việt)</h2>
+			<div class="help-steps">
+				<ol>
+					<li>Chọn <strong>Loại điện thoại</strong> (iPhone/Android). Mẫu máy và nền tảng sẽ lọc theo loại.</li>
+					<li>Chọn <strong>Chế độ hiển thị</strong>:
+						<ul>
+							<li><strong>Mô phỏng</strong>: hiện lưới icon ứng dụng.</li>
+							<li><strong>Iframe</strong>: dán <em>Iframe URL template</em> từ nhà cung cấp (có thể dùng {i}).</li>
+						</ul>
+					</li>
+					<li>Chọn <strong>Phần mềm</strong> theo danh mục; có thể dùng nút chọn nhanh.</li>
+					<li>Chọn <strong>Tính năng</strong> cần hiển thị.</li>
+					<li>Tùy chọn <strong>Tiền tố tên máy</strong> và <strong>Số cột lưới</strong> trong mục nâng cao.</li>
+					<li>Dùng mục <strong>Cấu hình (JSON)</strong> để lưu/tải nhanh cấu hình.</li>
+					<li>Nhập <strong>Số lượng</strong> (1–20) và bấm <strong>Tạo điện thoại</strong>.</li>
+				</ol>
+				<p class="muted">Lưu ý: Iframe phụ thuộc cấu hình CSP/X-Frame-Options của nhà cung cấp, có thể không nhúng được nếu bị chặn.</p>
+			</div>
 		</section>
 	</main>
 
@@ -403,6 +475,13 @@ function build_iframe_src(string $template, int $index): string {
 		const iframePresetEl = document.getElementById('iframe_preset');
 		const iframeUrlEl = document.getElementById('iframe_url_template');
 		const appsSelect = document.getElementById('apps');
+		const namePrefixEl = document.getElementById('name_prefix');
+		const gridColumnsEl = document.getElementById('grid_columns');
+		const configJsonEl = document.getElementById('config_json');
+		const btnCopyConfig = document.getElementById('copy_config');
+		const btnDownloadConfig = document.getElementById('download_config');
+		const btnLoadConfig = document.getElementById('load_config');
+		const btnReloadIframes = document.getElementById('reload_iframes');
 		const presetTemplates = {
 			'genesis_plus_gx': 'https://gx.example/room/{i}',
 			'cloud_phone_web': 'https://cloudphone.example/device/{i}?token=YOUR_TOKEN',
@@ -461,6 +540,82 @@ function build_iframe_src(string $template, int $index): string {
 		document.querySelector('.category-actions [data-action="clear-all"]').addEventListener('click', () => {
 			[...appsSelect.options].forEach(o => o.selected = false);
 			appsSelect.dispatchEvent(new Event('change', {bubbles:true}));
+		});
+
+		function getConfigFromForm() {
+			return {
+				device_type: deviceTypeEl.value,
+				model: modelEl.value,
+				platform: platformEl.value,
+				apps: [...appsSelect.options].filter(o => o.selected).map(o => o.value),
+				features: [...document.querySelectorAll('input[name="features[]"]:checked')].map(i => i.value),
+				quantity: Number(document.getElementById('quantity').value || '1'),
+				display_mode: displayModeEl.value,
+				iframe_preset: document.getElementById('iframe_preset').value,
+				iframe_url_template: iframeUrlEl.value,
+				name_prefix: namePrefixEl.value,
+				grid_columns: gridColumnsEl.value,
+			};
+		}
+
+		function applyConfigToForm(cfg) {
+			if (!cfg || typeof cfg !== 'object') return;
+			if (cfg.device_type) deviceTypeEl.value = cfg.device_type;
+			deviceTypeEl.dispatchEvent(new Event('change'));
+			if (cfg.model) modelEl.value = cfg.model;
+			if (cfg.platform) platformEl.value = cfg.platform;
+			if (Array.isArray(cfg.apps)) {
+				[...appsSelect.options].forEach(o => { o.selected = cfg.apps.includes(o.value); });
+			}
+			if (Array.isArray(cfg.features)) {
+				[...document.querySelectorAll('input[name="features[]"]')].forEach(i => {
+					i.checked = cfg.features.includes(i.value);
+				});
+			}
+			if (cfg.quantity) document.getElementById('quantity').value = String(cfg.quantity);
+			if (cfg.display_mode) displayModeEl.value = cfg.display_mode;
+			displayModeEl.dispatchEvent(new Event('change'));
+			if (cfg.iframe_preset) document.getElementById('iframe_preset').value = cfg.iframe_preset;
+			if (cfg.iframe_url_template) iframeUrlEl.value = cfg.iframe_url_template;
+			if (typeof cfg.name_prefix === 'string') namePrefixEl.value = cfg.name_prefix;
+			if (cfg.grid_columns) gridColumnsEl.value = cfg.grid_columns;
+		}
+
+		btnCopyConfig.addEventListener('click', async () => {
+			const text = JSON.stringify(getConfigFromForm(), null, 2);
+			configJsonEl.value = text;
+			try {
+				await navigator.clipboard.writeText(text);
+				alert('Đã sao chép cấu hình vào clipboard.');
+			} catch (e) {
+				alert('Không thể sao chép tự động. Hãy copy thủ công trong ô JSON.');
+			}
+		});
+
+		btnDownloadConfig.addEventListener('click', () => {
+			const blob = new Blob([JSON.stringify(getConfigFromForm(), null, 2)], {type: 'application/json'});
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(blob);
+			a.download = 'cloud-phone-config.json';
+			a.click();
+			URL.revokeObjectURL(a.href);
+		});
+
+		btnLoadConfig.addEventListener('click', () => {
+			try {
+				const cfg = JSON.parse(configJsonEl.value || '{}');
+				applyConfigToForm(cfg);
+				alert('Đã tải cấu hình vào form. Hãy bấm "Tạo điện thoại" để áp dụng.');
+			} catch (e) {
+				alert('JSON không hợp lệ.');
+			}
+		});
+
+		btnReloadIframes && btnReloadIframes.addEventListener('click', () => {
+			document.querySelectorAll('.live-iframe iframe').forEach((ifr) => {
+				const src = ifr.getAttribute('src');
+				ifr.setAttribute('src', src);
+			});
 		});
 	</script>
 </body>

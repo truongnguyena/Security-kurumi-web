@@ -12,29 +12,34 @@ php -S 0.0.0.0:8000 -t public
 
 Mở: http://localhost:8000
 
-## Danh mục phần mềm (App Catalog)
+## Tính năng chính
 
-- Hệ thống: Điện thoại, Tin nhắn, Danh bạ, Cài đặt, Trình duyệt, Camera
-- Giải trí: Thư viện ảnh/video, Nhạc, Video Player, Genesis Plus GX
-- Tiện ích: Ghi chú, Máy tính, Đồng hồ, Lịch, Thời tiết, File Manager
-- Kết nối: Email, Chat App, Maps
-- Mở rộng: App Store, Cloud Drive, AI Assistant, Ví điện tử, Cloud Phone Web
+- Chọn loại máy, mẫu, OS; chọn app theo danh mục (có Genesis Plus GX, Cloud Phone Web)
+- Chế độ hiển thị: Mô phỏng UI hoặc Iframe (Emulator/Cloud OS)
+- Nút chọn nhanh app theo danh mục; giới hạn tối đa hiển thị 12 app
+- Tính năng: Camera, GPS, NFC, 5G, Dual SIM, Bluetooth, Wi‑Fi, Hotspot
 
-Form cho phép multi-select và có nút chọn nhanh theo danh mục.
+## Tùy chọn nâng cao
 
-## Chế độ hiển thị
+- Tiền tố tên máy: đặt tiền tố cho nhãn thiết bị (ví dụ: "Máy A-")
+- Số cột lưới: chọn số cột cố định (1–6) hoặc tự động
+- Cấu hình (JSON):
+  - Sao chép cấu hình: copy JSON vào clipboard
+  - Tải xuống JSON: xuất file `cloud-phone-config.json`
+  - Tải cấu hình: dán JSON vào ô và bấm Tải để nạp vào form (sau đó bấm "Tạo điện thoại")
+- Iframe controls: nút "Tải lại iframes" để refresh tất cả phiên emulator/cloud
 
-- Mô phỏng (mock): lưới icon với nhãn viết tắt.
-- Iframe (Emulator/Cloud OS thật): điền "Iframe URL template" (hỗ trợ `{i}` = chỉ số máy).
-  - Presets (ví dụ): Genesis Plus GX, Cloud Phone Web. Chọn preset sẽ tự điền URL mẫu:
-    - GX: `https://gx.example/room/{i}`
-    - Cloud Phone Web: `https://cloudphone.example/device/{i}?token=YOUR_TOKEN`
-  - Lưu ý: Nhà cung cấp phải cho phép nhúng (CSP/X-Frame-Options). Một số quyền (camera/mic/clipboard/fullscreen) đã cấp trong thuộc tính `allow` của iframe.
+## Iframe presets (ví dụ)
+
+- Genesis Plus GX: tự điền `https://gx.example/room/{i}`
+- Cloud Phone Web: tự điền `https://cloudphone.example/device/{i}?token=YOUR_TOKEN`
+
+Lưu ý: nhà cung cấp phải cho phép nhúng (CSP/X-Frame-Options). Có thể cần token/đăng nhập.
 
 ## Cấu trúc
 
-- `public/index.php` – Form, validation, danh mục app, preset iframe, render
-- `public/styles.css` – Giao diện, badge, danh mục và style iframe
+- `public/index.php` – Trang chính: form, validation, danh mục app, preset, nâng cao, render
+- `public/styles.css` – Giao diện, badge, danh mục, iframe, textarea JSON
 
 ## Ghi chú
 

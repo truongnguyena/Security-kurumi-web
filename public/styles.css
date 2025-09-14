@@ -100,6 +100,20 @@ body {
 	gap: 6px;
 }
 
+textarea.json {
+	width: 100%;
+	min-height: 140px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	border: 1px solid rgba(255,255,255,0.12);
+	background: rgba(255,255,255,0.04);
+	color: var(--text);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	font-size: 12px;
+	outline: none;
+	resize: vertical;
+}
+
 .feature-list {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(120px, 1fr));
@@ -163,7 +177,7 @@ select[multiple] {
 	border: 1px solid rgba(79,140,255,0.35);
 }
 
-select:focus, input[type="number"]:focus, input[type="text"]:focus {
+select:focus, input[type="number"]:focus, input[type="text"]:focus, textarea.json:focus {
 	border-color: rgba(79, 140, 255, 0.8);
 	box-shadow: 0 0 0 3px rgba(79,140,255,0.2);
 }
